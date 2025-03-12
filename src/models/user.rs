@@ -14,5 +14,5 @@ pub struct User {
 #[table_name = "users"]
 pub struct NewUser {
     pub email: String,
-    pub password_hash: String,
+    pub password_hashed: String,
 }
