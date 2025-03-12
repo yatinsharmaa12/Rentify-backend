@@ -1,19 +1,25 @@
-use serde::{Serialize};
 use diesel::prelude::*;
+use diesel::Queryable;
+use diesel::Insertable;
+use serde::Serialize;
 use crate::schema::users;
-use diesel::{Insertable, Queryable};
 
-#[derive(Debug, Serialize, Queryable)]
+
+#[derive(Queryable, Insertable, Selectable, Serialize)]
+#[diesel(table_name = users)]
 pub struct User {
     pub id: i32,
+    pub user_handle: String,
+    pub name: String,
     pub email: String,
     pub password_hash: String,
-    pub username: String
 }
 
-#[derive(Insertable, Serialize,)]
+#[derive(Insertable)]
 #[diesel(table_name = users)]
 pub struct NewUser {
+    pub user_handle: String,
+    pub name: String,
     pub email: String,
     pub password_hash: String,
 }
