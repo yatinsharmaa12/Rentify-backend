@@ -1,7 +1,7 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
 
 // Hash a plain test password
-pub fn hash_password(plain: %str) -> Result<String, bcrypt::BcryptError> {
+pub fn hash_password(plain: &str) -> Result<String, bcrypt::BcryptError> {
     hash(plain, DEFAULT_COST)
 }
 

@@ -35,14 +35,14 @@ pub async fn sign_up(
     // Insert the new user into the database using diesel
 
     let inserted_user = web::block(move || {
-        diesel::insert_into(users).values(&new_user).get_result::<User>(&conn)
+        diesel::insert_into(users).values(&new_user).get_result::<User>(&mut *conn)
     }).await;
 
     match inserted_user {
         Ok(user) => HttpResponse::Created().json(user),
         Err(e) =>{
             eprintln!("Error: {:?}", e);
-         HttpResponse::InternalServerError().json(e.to_string()),
+         HttpResponse::InternalServerError().json(e.to_string())
         }
     }
 
@@ -68,18 +68,24 @@ pub async fn login(
 
     // Query the user by email
     let user_result = web::block(move || {
-        users.filter(email.eq(&form.email)).first::<User>(&conn)
+        users.filter(email.eq(&form.email)).first::<User>(&mut conn)
     })
     .await;
 
     match user_result {
         Ok(user) => {
-            // verify the provided password against the hashed password
             match verify_password(&form.password, &user.password_hash) {
-                Ok(valid) if valid => HttpResponse::Ok().body("Welcome back!"),
-                _ => HttpResponse::Unauthorized().body("Invalid email or password"),
+                Ok(true) => HttpResponse::Ok().body("Welcome back!"),
+                Ok(false) => HttpResponse::Unauthorized().body("Invalid email or password"),
+                Err(_) => HttpResponse::InternalServerError().body("Error verifying password"),
             }
         }
-        Err(_) => HttpResponse::Unauthorized().body("Invalid email or password"),
+        Err(diesel::result::Error::NotFound) => {
+            HttpResponse::Unauthorized().body("Invalid email or password")
+        }
+        Err(_) => {
+            HttpResponse::InternalServerError().body("Database error")
+        }
     }
+    
 }
