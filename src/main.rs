@@ -11,7 +11,7 @@ use crate::routes::user_routes::{sign_up, login};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let pool = db::pool::establish_connection_pool();
+    let pool = db::pool::init_pool();
 
     HttpServer::new(move || {
         App::new()
