@@ -1,28 +1,52 @@
-use actix_web:: {web,HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use diesel::prelude::*;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
+use serde_json::json;
+use jsonwebtoken::{encode, EncodingKey, Header};
+use chrono::{Utc, Duration};
+use serde::{Deserialize, Serialize};
 use crate::models::user::{User, NewUser};
 use crate::utils::{hash_password, verify_password};
 use crate::schema::users::dsl::*;
 use crate::db::pool::DbPool;
 
-
-// Data Structure fo receiving signup request
+// Data Structure for receiving signup request
 #[derive(serde::Deserialize)]
-
 pub struct SignUpData {
     pub email: String,
     pub password: String,
 }
 
-// Handler for SIGNUP 
+// JWT Token Claims
+#[derive(Serialize, Deserialize)]
+struct Claims {
+    sub: i32,  // User ID
+    exp: usize, // Expiration timestamp
+}
+
+// Function to generate JWT token
+fn generate_jwt(user_id: i32) -> String {
+    let claims = Claims {
+        sub: user_id,
+        exp: (Utc::now() + Duration::days(7)).timestamp() as usize,
+    };
+
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(b"your_secret_key"),  // Change this secret key
+    )
+    .expect("Failed to generate token")
+}
+
+// 🔹 SIGNUP HANDLER
 pub async fn sign_up(
     pool: web::Data<DbPool>,
     form: web::Json<SignUpData>,
 ) -> impl Responder {
-    let mut conn = pool.get().expect("couldn't get db connection from pool");
-    
+    let mut conn = pool.get().expect("Couldn't get DB connection from pool");
+
     // Hash the password
     let hashed = match hash_password(&form.password) {
         Ok(v) => v,
@@ -36,11 +60,11 @@ pub async fn sign_up(
         password_hash: hashed,
     };
 
-    // Insert into database using web::block
+    // Insert into database
     let inserted_user = web::block(move || {
         diesel::insert_into(users)
             .values(&new_user)
-            .returning(User::as_select()) // Ensure `as_select()` is properly implemented
+            .returning(User::as_select())
             .get_result::<User>(&mut conn)
     })
     .await;
@@ -58,26 +82,19 @@ pub async fn sign_up(
     }
 }
 
-
-
-// Data structure for receiving login request
-
-
+// 🔹 LOGIN HANDLER
 #[derive(serde::Deserialize)]
-
 pub struct LoginData {
     pub email: String,
     pub password: String,
 }
 
-// Handler for user login
-
 pub async fn login(
     pool: web::Data<DbPool>,
     form: web::Json<LoginData>,
 ) -> impl Responder {
-    let mut conn = pool.get().expect("couldn't get db connection from pool");
-    let email_clone = form.email.clone(); // Clone email before moving
+    let mut conn = pool.get().expect("Couldn't get DB connection from pool");
+    let email_clone = form.email.clone();
 
     // Query the user by email
     let user_result = web::block(move || {
@@ -88,7 +105,8 @@ pub async fn login(
     match user_result {
         Ok(Ok(user)) => {
             if verify_password(&form.password, &user.password_hash).unwrap_or(false) {
-                HttpResponse::Ok().body("Welcome back!")
+                let token = generate_jwt(user.id);
+                HttpResponse::Ok().json(json!({ "token": token }))
             } else {
                 HttpResponse::Unauthorized().body("Invalid email or password")
             }
