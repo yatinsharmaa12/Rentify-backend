@@ -1,18 +1,17 @@
 use actix_web::{web, HttpResponse, Responder};
 use diesel::prelude::*;
-use diesel::QueryDsl;
-use diesel::ExpressionMethods;
+use diesel::RunQueryDsl;
 use serde_json::json;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use chrono::{Utc, Duration};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
 use crate::models::user::{User, NewUser};
 use crate::utils::{hash_password, verify_password};
 use crate::schema::users::dsl::*;
 use crate::db::pool::DbPool;
 
 // Data Structure for receiving signup request
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct SignUpData {
     pub email: String,
     pub password: String,
@@ -40,7 +39,7 @@ fn generate_jwt(user_id: i32) -> String {
     .expect("Failed to generate token")
 }
 
-// 🔹 SIGNUP HANDLER
+// SIGNUP HANDLER
 pub async fn sign_up(
     pool: web::Data<DbPool>,
     form: web::Json<SignUpData>,
@@ -60,7 +59,7 @@ pub async fn sign_up(
         password_hash: hashed,
     };
 
-    // Insert into database
+    // Insert into database using web::block to offload from the async thread
     let inserted_user = web::block(move || {
         diesel::insert_into(users)
             .values(&new_user)
@@ -82,8 +81,8 @@ pub async fn sign_up(
     }
 }
 
-// 🔹 LOGIN HANDLER
-#[derive(serde::Deserialize)]
+// LOGIN HANDLER
+#[derive(Deserialize)]
 pub struct LoginData {
     pub email: String,
     pub password: String,
@@ -94,11 +93,12 @@ pub async fn login(
     form: web::Json<LoginData>,
 ) -> impl Responder {
     let mut conn = pool.get().expect("Couldn't get DB connection from pool");
-    let email_clone = form.email.clone();
+    let email_clone = form.email.clone(); // Clone email before moving
 
-    // Query the user by email
+    // Query the user by email using web::block
     let user_result = web::block(move || {
-        users.filter(email.eq(email_clone)).first::<User>(&mut conn)
+        users.filter(email.eq(email_clone))
+            .first::<User>(&mut conn)
     })
     .await;
 
@@ -114,8 +114,6 @@ pub async fn login(
         Ok(Err(diesel::result::Error::NotFound)) => {
             HttpResponse::Unauthorized().body("Invalid email or password")
         }
-        _ => {
-            HttpResponse::InternalServerError().body("Database error")
-        }
+        _ => HttpResponse::InternalServerError().body("Database error"),
     }
 }
