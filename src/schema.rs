@@ -5,10 +5,10 @@ diesel::table! {
         id -> Int4,
         user_id -> Int4,
         name -> Text,
-        description -> Nullable<Text>,
+        description -> Text,
         price -> Int4,
         image_url -> Text,
-        created_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
     }
 }
 
