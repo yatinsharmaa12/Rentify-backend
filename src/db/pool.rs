@@ -24,12 +24,12 @@ pub fn init_pool() -> DbPool {
             panic!("Could not connect to the database.");
         });
 
-    // ✅ Discard old prepared statements to avoid Neon errors
+    // 🔹 Explicitly disable prepared statements
     {
         let mut conn = pool.get().expect("Failed to get DB connection");
-        diesel::sql_query("DISCARD ALL").execute(&mut conn).ok();
+        let _ = diesel::sql_query("SET plan_cache_mode = force_generic_plan").execute(&mut conn);
     }
 
-    println!("Database connection successful!");
+    println!("✅ Database connection successful!");
     pool
 }

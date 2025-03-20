@@ -8,8 +8,7 @@ mod utils;
 mod middleware; // ✅ Import middleware module
 use db::pool::init_pool;
 use crate::routes::user_routes::{sign_up, login};
-use crate::routes::product_routes::add_product;
-use crate::routes::product_routes::get_products; // ✅ Import get_products
+use crate::routes::product_routes::config as product_routes_config;
 use middleware::auth::AuthenticatedUser; // ✅ Import AuthenticatedUser
 
 #[tokio::main]
@@ -29,8 +28,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/api")
                     .route("/signup", web::post().to(sign_up))
                     .route("/login", web::post().to(login))
-                    .route("/product", web::post().to(add_product))
-                    .route("/products", web::get().to(get_products))
+                    .configure(product_routes_config),
             )
     })
     .bind(("127.0.0.1", 8080))?

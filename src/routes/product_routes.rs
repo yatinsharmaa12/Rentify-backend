@@ -56,7 +56,7 @@ pub async fn get_products(pool: web::Data<DbPool>) -> impl Responder {
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/products")
+        web::scope("/product")
             .route("/add", web::post().to(add_product))
             .route("/list", web::get().to(get_products)),  // ✅ Added get_products
     );
