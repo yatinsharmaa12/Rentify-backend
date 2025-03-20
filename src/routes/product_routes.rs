@@ -67,10 +67,40 @@ pub async fn get_products(pool: web::Data<DbPool>) -> impl Responder {
     }
 }
 
+pub async fn delete_product(
+    pool: web::Data<DbPool>,
+    user: AuthenticatedUser,
+    product_id: web::Path<i32>,
+) -> impl Responder {
+    let conn = &mut pool.get().expect("Failed to get DB connection");
+
+    let target_product = products
+        .filter(id.eq(*product_id))
+        .first::<crate::models::product::Product>(conn)
+        .optional();
+
+    match target_product {
+        Ok(Some(product)) => {
+            if product.user_id != user.user_id {
+                return HttpResponse::Forbidden().body("You are not allowed to delete this product");
+            }
+
+            diesel::delete(products.filter(id.eq(product.id)))
+                .execute(conn)
+                .expect("Failed to delete product");
+
+            HttpResponse::Ok().json("Product deleted successfully")
+        }
+        Ok(None) => HttpResponse::NotFound().body("Product not found"),
+        Err(_) => HttpResponse::InternalServerError().body("Database error"),
+    }
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/product")
             .route("/add", web::post().to(add_product))
-            .route("/list", web::get().to(get_products)),
+            .route("/list", web::get().to(get_products))
+            .route("/delete/{id}", web::delete().to(delete_product)),
     );
 }

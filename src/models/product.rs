@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use diesel::prelude::*;
 use crate::schema::products;
 use chrono::{NaiveDateTime};
