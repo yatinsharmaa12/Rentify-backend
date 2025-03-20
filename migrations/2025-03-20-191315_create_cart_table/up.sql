@@ -1,0 +1,9 @@
+-- Your SQL goes here
+
+CREATE TABLE cart (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    added_at TIMESTAMP DEFAULT NOW()
+);
