@@ -10,7 +10,7 @@ use db::pool::init_pool;
 use crate::routes::user_routes::{sign_up, login};
 use crate::routes::product_routes::config as product_routes_config;
 use crate::routes::cart::config as cart_routes_config;
-use middleware::auth::AuthenticatedUser; // ✅ Import AuthenticatedUser
+ // ✅ Import AuthenticatedUser
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
